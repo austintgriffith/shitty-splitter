@@ -1,68 +1,72 @@
-import Link from "next/link";
+import { useState } from "react";
 import type { NextPage } from "next";
-import { BugAntIcon, MagnifyingGlassIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { formatEther, parseEther } from "viem";
 import { MetaHeader } from "~~/components/MetaHeader";
+import { Address, AddressInput, EtherInput } from "~~/components/scaffold-eth";
+import { useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
 
 const Home: NextPage = () => {
+  const [address, setAddress] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+
+  const [addresses, setAddresses] = useState<string[]>([]);
+  const [amounts, setAmounts] = useState<string[]>([]);
+
+  let total = 0n;
+  if (amounts) {
+    for (let i = 0; i < amounts.length; i++) {
+      total += parseEther(amounts[i]);
+    }
+  }
+
+  const display = [];
+  for (let a in addresses) {
+    display.push(
+      <div className="flex flex-col">
+        <Address address={addresses[a]} /> : {amounts[a]}
+      </div>,
+    );
+  }
+
+  const { writeAsync: split } = useScaffoldContractWrite({
+    contractName: "YourContract",
+    functionName: "split",
+    args: [addresses, amounts.map(a => parseEther(a))],
+    value: "" + formatEther(total),
+  });
+
   return (
     <>
       <MetaHeader />
       <div className="flex items-center flex-col flex-grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center mb-8">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
-          </h1>
-          <p className="text-center text-lg">
-            Get started by editing{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/nextjs/pages/index.tsx
-            </code>
-          </p>
-          <p className="text-center text-lg">
-            Edit your smart contract{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              YourContract.sol
-            </code>{" "}
-            in{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/hardhat/contracts
-            </code>
-          </p>
-        </div>
+        <div className="p-4">{display}</div>
 
-        <div className="flex-grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col sm:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contract
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <SparklesIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Experiment with{" "}
-                <Link href="/example-ui" passHref className="link">
-                  Example UI
-                </Link>{" "}
-                to build your own UI.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
+        <div>
+          <AddressInput placeholder="address" value={address} onChange={a => setAddress(a)} />
+          <EtherInput placeholder="amount" value={amount} onChange={a => setAmount(a)} />
+          <div className="flex items-center flex-col flex-grow pt-10">
+            <button
+              className="btn"
+              onClick={() => {
+                setAddresses([...addresses, address]);
+                setAmounts([...amounts, amount]);
+                setAddress("");
+                setAmount("");
+              }}
+            >
+              add
+            </button>
+          </div>
+          <div className="flex items-center flex-col flex-grow pt-10">
+            <button
+              className="btn btn-primary"
+              disabled={addresses.length === 0}
+              onClick={() => {
+                split();
+              }}
+            >
+              split {formatEther(total)}
+            </button>
           </div>
         </div>
       </div>
